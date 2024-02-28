@@ -1,11 +1,17 @@
-import { Text, Button } from "galio-framework";
-import React, { useState, useEffect } from "react";
+import { Text, Button, Input, theme, Block } from "galio-framework";
+import React, { useState, useEffect} from "react";
 import { StyleSheet, View } from "react-native";
 import { Camera } from "expo-camera";
 
+const url = "http://192.168.83.48:5000/guide"
+
 export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
+  const [user, setUser] = useState("")
+  const [text, setText] = useState("")
+  const [status, setStatus] = useState(0)
   const [scanned, setScanned] = useState(true);
+
 
   useEffect(() => {
     (async () => {
@@ -14,9 +20,22 @@ export default function App() {
     })();
   }, []);
 
-  const handleBarCodeScanned = ({ type, data }) => {
+  const handleBarCodeScanned = async ({ data }) => {
     setScanned(true);
-    alert(`Bar code with type ${type} and data ${data} has been scanned!`);
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user: user,
+        qr_code: data,
+      }),
+    }).then(response => {
+      setStatus(response.status)
+    })
+
   };
 
   async function Permission() {
@@ -35,6 +54,17 @@ export default function App() {
     );
   };
 
+  if(user === "") {
+    return <View style={styles.container}>
+      <Text h4> Insert username </Text>
+      <Input placeholder="stxxxxx" color={theme.COLORS.INFO} style={{ borderColor: theme.COLORS.INFO }} placeholderTextColor={theme.COLORS.INFO} onChangeText={(e) => setText(e)}/>
+      <Button onPress={() => {
+        setUser(text)
+      }}> Login </Button>
+    </View>
+  }
+
+
   if (hasPermission === null) {
     return <View />;
   }
@@ -51,6 +81,21 @@ export default function App() {
 
   return (
     <View style={styles.container}>
+      {status != 0?
+        status == 402?
+          <Block card>
+            <Text style={{ color: theme.COLORS.WARNING }}  h5> QR has been used </Text>
+          </Block> :
+        status == 200?
+        <Block card>
+            <Text style={{ color: theme.COLORS.SUCCESS}}  h5> Succes ! </Text>
+          </Block> : 
+          <Block card>
+            <Text style={{ color: theme.COLORS.DRIBBBLE }}  h5> Wrong QR code ! </Text>
+          </Block>
+
+      : null
+      }
       <Text h3>UJEP Scanner </Text>
       {scanned ? <View style={styles.cameraContainer}></View> : renderCamera()}
       {scanned ? (
